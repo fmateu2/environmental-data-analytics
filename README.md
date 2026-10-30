@@ -15,7 +15,7 @@ An academic Oracle database project combining climate, energy, emissions, air-qu
 | Validation material | Companion validation statements for the 30 queries |
 | Database logic | 3 trigger definitions and 3 auxiliary tables |
 | Design | Conceptual and relational diagrams |
-| Documentation | Original 109-page report and presentation, available separately in the portfolio |
+| Documentation | Original 109-page report and presentation in `docs/` |
 
 The work connects country, city, year and exact-date dimensions with energy records, sector emissions, air-quality observations, power plants, companies and government policies.
 
@@ -33,7 +33,7 @@ According to the original team report, Francesc contributed to the conceptual an
 | `models/conceptual-model.jpg` | Original conceptual model |
 | `models/relational-model.jpg` | Original relational model |
 
-The source ZIP is deliberately lightweight. The complete academic report and presentation are separate downloads on the project page.
+The complete [academic report](docs/technical-report.pdf) and [presentation](docs/presentation.pdf) are included in `docs/`. The original data models can be inspected in [models/](models/README.md).
 
 ## Reproduction sequence
 
@@ -82,3 +82,4 @@ Potential follow-up work includes reproducible staging-table creation, explicit 
 Original SQL and diagrams are retained. Packaging changes filenames and adds this README; the portfolio's schema and SQL explorers are presentation additions.
 
 No new licence is assigned to the original project or dataset. Consult the authors and source-data terms before reuse.
+
