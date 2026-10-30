@@ -1,0 +1,225 @@
+INSERT INTO Year_ (year_number)
+SELECT DISTINCT "YEAR" FROM CO_EMISSIONS_BY_SECTOR WHERE "YEAR" IS NOT NULL
+UNION
+SELECT DISTINCT "YEAR" FROM CITY_TEMPERATURE WHERE "YEAR" IS NOT NULL
+UNION
+SELECT DISTINCT START_YEAR FROM NUCLEAR_POWER_DATASET WHERE START_YEAR IS NOT NULL
+UNION
+SELECT DISTINCT "YEAR" FROM ENERGY WHERE "YEAR" IS NOT NULL
+UNION
+SELECT DISTINCT EXTRACT(YEAR FROM "Date") FROM GLOBAL_AIR_QUALITY_DATA_10000 WHERE "Date" IS NOT NULL;
+
+INSERT INTO Country (country_name)
+SELECT DISTINCT ENTITY FROM CO_EMISSIONS_BY_SECTOR WHERE ENTITY IS NOT NULL
+UNION
+SELECT DISTINCT COUNTRY FROM CITY_TEMPERATURE WHERE COUNTRY IS NOT NULL
+UNION
+SELECT DISTINCT COUNTRY FROM ENERGY WHERE COUNTRY IS NOT NULL
+UNION
+SELECT DISTINCT COUNTRY FROM GLOBAL_AIR_QUALITY_DATA_10000 WHERE COUNTRY IS NOT NULL
+UNION
+SELECT DISTINCT COUNTRY_NAME FROM GOVERNMENT_POLICY_1 WHERE COUNTRY_NAME IS NOT NULL
+UNION
+SELECT DISTINCT COUNTRY FROM NUCLEAR_POWER_DATASET WHERE COUNTRY IS NOT NULL;
+
+UPDATE Country c
+SET country_code = (SELECT MAX(CODE) FROM CO_EMISSIONS_BY_SECTOR e WHERE e.ENTITY = c.country_name)
+WHERE EXISTS (SELECT 1 FROM CO_EMISSIONS_BY_SECTOR e WHERE e.ENTITY = c.country_name);
+
+UPDATE Country c
+SET region_name = (SELECT MAX(REGION) FROM CITY_TEMPERATURE t WHERE t.COUNTRY = c.country_name)
+WHERE EXISTS (SELECT 1 FROM CITY_TEMPERATURE t WHERE t.COUNTRY = c.country_name);
+
+INSERT INTO Company (company_name)
+SELECT DISTINCT OWNER FROM NUCLEAR_POWER_DATASET WHERE OWNER IS NOT NULL
+UNION
+SELECT DISTINCT OPERATOR FROM NUCLEAR_POWER_DATASET WHERE OPERATOR IS NOT NULL;
+
+UPDATE Company c
+SET company_website = (
+    SELECT MAX(OPERATOR_WEBSITE)
+    FROM NUCLEAR_POWER_DATASET n
+    WHERE n.OPERATOR = c.company_name
+)
+WHERE EXISTS (SELECT 1 FROM NUCLEAR_POWER_DATASET n WHERE n.OPERATOR = c.company_name);
+
+INSERT INTO Energy_Type (type_name)
+SELECT DISTINCT "TYPE" FROM NUCLEAR_POWER_DATASET WHERE "TYPE" IS NOT NULL
+UNION
+SELECT DISTINCT ENERGY_TYPE FROM ENERGY WHERE ENERGY_TYPE IS NOT NULL;
+
+COMMIT;
+
+INSERT INTO Exact_Date_ (day_number, month_number, year_number)
+SELECT DISTINCT day_num, month_num, year_num
+FROM (
+    SELECT "DAY" AS day_num, "MONTH" AS month_num, "YEAR" AS year_num FROM CITY_TEMPERATURE WHERE "DAY" IS NOT NULL
+    UNION
+    SELECT EXTRACT(DAY FROM "Date"), EXTRACT(MONTH FROM "Date"), EXTRACT(YEAR FROM "Date") FROM GLOBAL_AIR_QUALITY_DATA_10000 WHERE "Date" IS NOT NULL
+);
+
+INSERT INTO City (city_name, country_name)
+SELECT city_name, MAX(country_name)
+FROM (
+    SELECT CITY AS city_name, COUNTRY AS country_name FROM CITY_TEMPERATURE WHERE CITY IS NOT NULL
+    UNION
+    SELECT CITY AS city_name, COUNTRY AS country_name FROM GLOBAL_AIR_QUALITY_DATA_10000 WHERE CITY IS NOT NULL
+)
+GROUP BY city_name;
+
+UPDATE City c
+SET
+    city_rank = (SELECT MAX(RANK) FROM COST_OF_LIVING_INDEX col WHERE col.CITY LIKE c.city_name || ',%'),
+    cost_of_living_index = (SELECT MAX(COST_OF_LIVING_INDEX) FROM COST_OF_LIVING_INDEX col WHERE col.CITY LIKE c.city_name || ',%'),
+    rent_index = (SELECT MAX(RENT_INDEX) FROM COST_OF_LIVING_INDEX col WHERE col.CITY LIKE c.city_name || ',%'),
+    groceries_index = (SELECT MAX(GROCERIES_INDEX) FROM COST_OF_LIVING_INDEX col WHERE col.CITY LIKE c.city_name || ',%'),
+    restaurant_price_index = (SELECT MAX(RESTAURANT_PRICE_INDEX) FROM COST_OF_LIVING_INDEX col WHERE col.CITY LIKE c.city_name || ',%'),
+    local_purchasing_power_index = (SELECT MAX(LOCAL_PURCHASING_POWER_INDEX) FROM COST_OF_LIVING_INDEX col WHERE col.CITY LIKE c.city_name || ',%'),
+    cost_of_living_plus_rent_index = (SELECT MAX(COST_OF_LIVING_PLUS_RENT_INDEX) FROM COST_OF_LIVING_INDEX col WHERE col.CITY LIKE c.city_name || ',%')
+WHERE EXISTS (
+    SELECT 1 FROM COST_OF_LIVING_INDEX col WHERE col.CITY LIKE c.city_name || ',%'
+);
+
+INSERT INTO Power_Plant (power_plant_name, power_plant_location, start_year, capacity_MW, annual_generation_GWh, lifetime_generation_GWh, plant_type, power_plant_status, country_name, operator_, owner_)
+SELECT
+    POWER_PLANT_NAME,
+    MAX(LOCATION),
+    MAX(START_YEAR),
+    MAX(CAPACITY_MW),
+    MAX(ANNUAL_GENERATION_GWH),
+    MAX(LIFETIME_GENERATION_GWH),
+    MAX("TYPE"),
+    MAX(STATUS),
+    MAX(COUNTRY),
+    MAX(OPERATOR),
+    MAX(OWNER)
+FROM NUCLEAR_POWER_DATASET
+WHERE POWER_PLANT_NAME IS NOT NULL
+GROUP BY POWER_PLANT_NAME;
+
+INSERT INTO Government_Policy (policy_id, name_policy, budget_million_usd, target_reduction_percent, policy_status, start_policy_year, policy_type, country_name)
+SELECT
+    ROWNUM,
+    POLICY_NAME,
+    BUDGET_MILLION_USD,
+    TARGET_REDUCTION_PERCENT,
+    POLICY_STATUS,
+    START_POLICY_YEAR,
+    POLICY_TYPE,
+    COUNTRY_NAME
+FROM GOVERNMENT_POLICY_1
+WHERE POLICY_NAME IS NOT NULL;
+
+COMMIT;
+
+INSERT INTO Registers (city_name, country_name, day_number, month_number, year_number, pm2_5, pm10, no2, so2, co, o3, temperature, humidity, wind_speed)
+SELECT
+    CITY,
+    COUNTRY,
+    EXTRACT(DAY FROM "Date"),
+    EXTRACT(MONTH FROM "Date"),
+    EXTRACT(YEAR FROM "Date"),
+    MAX(PM2_5),
+    MAX(PM10),
+    MAX(NO2),
+    MAX(SO2),
+    MAX(CO),
+    MAX(O3),
+    MAX(Temperature),
+    MAX(Humidity),
+    MAX(Wind_Speed)
+FROM GLOBAL_AIR_QUALITY_DATA_10000_
+WHERE CITY IS NOT NULL AND COUNTRY IS NOT NULL AND "Date" IS NOT NULL
+GROUP BY CITY, COUNTRY, EXTRACT(DAY FROM "Date"), EXTRACT(MONTH FROM "Date"), EXTRACT(YEAR FROM "Date");
+
+INSERT INTO Registers (city_name, country_name, day_number, month_number, year_number, avg_temperature)
+SELECT CITY, COUNTRY, "DAY", "MONTH", "YEAR", MAX(AVGTEMPERATURE)
+FROM CITY_TEMPERATURE ct
+WHERE NOT EXISTS (
+    SELECT 1 FROM Registers r
+    WHERE r.city_name = ct.CITY
+      AND r.country_name = ct.COUNTRY
+      AND r.day_number = ct."DAY"
+      AND r.month_number = ct."MONTH"
+      AND r.year_number = ct."YEAR"
+)
+AND CITY IS NOT NULL AND COUNTRY IS NOT NULL AND "DAY" IS NOT NULL AND "MONTH" IS NOT NULL AND "YEAR" IS NOT NULL
+GROUP BY CITY, COUNTRY, "DAY", "MONTH", "YEAR";
+
+UPDATE Registers r
+SET avg_temperature = (
+    SELECT MAX(AVGTEMPERATURE)
+    FROM CITY_TEMPERATURE ct
+    WHERE ct.CITY = r.city_name
+      AND ct.COUNTRY = r.country_name
+      AND ct."DAY" = r.day_number
+      AND ct."MONTH" = r.month_number
+      AND ct."YEAR" = r.year_number
+)
+WHERE EXISTS (
+    SELECT 1 FROM CITY_TEMPERATURE ct
+    WHERE ct.CITY = r.city_name
+      AND ct.COUNTRY = r.country_name
+      AND ct."DAY" = r.day_number
+      AND ct."MONTH" = r.month_number
+      AND ct."YEAR" = r.year_number
+);
+
+COMMIT;
+
+SELECT * FROM REGISTERS;
+
+INSERT INTO Yearly_Stats (country_name, year_number, population, gdp, energy_intensity_per_capita, energy_intensity_by_gdp)
+SELECT
+    COUNTRY,
+    "YEAR",
+    MAX(POPULATION),
+    MAX(GDP),
+    MAX(ENERGY_INTENSITY_PER_CAPITA),
+    MAX(ENERGY_INTENSITY_BY_GDP)
+FROM ENERGY
+WHERE COUNTRY IS NOT NULL AND "YEAR" IS NOT NULL
+GROUP BY COUNTRY, "YEAR";
+
+INSERT INTO Yearly_Emits (
+    country_name,
+    year_number,
+    co2_from_buildings,
+    co2_from_industry,
+    co2_from_land_use_change_and_forestry,
+    co2_from_other_fuel_combustion,
+    co2_from_transport,
+    co2_from_manufacturing_and_construction,
+    fugitive_co2_from_energy_production,
+    co2_from_electricity_and_heat,
+    co2_from_bunker_fuels
+)
+SELECT
+    ENTITY,
+    "YEAR",
+    MAX(CARBON_DIOXIDE_EMISSIONS_FROM_BUILDINGS),
+    MAX(CARBON_DIOXIDE_EMISSIONS_FROM_INDUSTRY),
+    MAX(CARBON_DIOXIDE_EMISSIONS_FROM_LAND_USE_CHANGE_AND_FORESTRY),
+    MAX(CARBON_DIOXIDE_EMISSIONS_FROM_OTHER_FUEL_COMBUSTION),
+    MAX(CARBON_DIOXIDE_EMISSIONS_FROM_TRANSPORT),
+    MAX(CARBON_DIOXIDE_EMISSIONS_FROM_MANUFACTURING_AND_CONSTRUCTION),
+    MAX(FUGITIVE_EMISSIONS_OF_CARBON_DIOXIDE_FROM_ENERGY_PRODUCTION),
+    MAX(CARBON_DIOXIDE_EMISSIONS_FROM_ELECTRICITY_AND_HEAT),
+    MAX(CARBON_DIOXIDE_EMISSIONS_FROM_BUNKER_FUELS)
+FROM CO_EMISSIONS_BY_SECTOR
+WHERE ENTITY IS NOT NULL AND "YEAR" IS NOT NULL
+GROUP BY ENTITY, "YEAR";
+
+INSERT INTO Yearly_Energy_Records (country_name, year_number, type_name, energy_consumption, energy_production, co2_emission)
+SELECT
+    COUNTRY,
+    "YEAR",
+    ENERGY_TYPE,
+    MAX(ENERGY_CONSUMPTION),
+    MAX(ENERGY_PRODUCTION),
+    MAX(CO2_EMISSION)
+FROM ENERGY
+WHERE COUNTRY IS NOT NULL AND "YEAR" IS NOT NULL AND ENERGY_TYPE IS NOT NULL
+GROUP BY COUNTRY, "YEAR", ENERGY_TYPE;
+
+COMMIT;
