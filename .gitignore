@@ -1,0 +1,36 @@
+# Local environments and credentials
+.env
+.env.*
+!.env.example
+secrets/
+credentials.json
+credentials.*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_ed25519
+
+# Oracle wallets, local connections and database exports
+wallet/
+wallets/
+Wallet_*.zip
+*.sso
+tnsnames.ora
+sqlnet.ora
+connections.json
+connections.xml
+*.dmp
+
+# SQL client history, logs and spool output
+.sqlplus_history
+.sqlcl/
+*.log
+*.lst
+
+# Local operating-system metadata
+.DS_Store
+Thumbs.db
