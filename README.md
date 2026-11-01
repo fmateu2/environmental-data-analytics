@@ -83,7 +83,7 @@ Potential follow-up work includes reproducible staging-table creation, explicit 
 
 ## Credits and reuse
 
-Original SQL and diagrams are retained. Packaging changes filenames and adds this README; the portfolio's schema and SQL explorers are presentation additions.
+Original analytical SQL and diagrams are retained. The policy-budget alert trigger includes the documented mutating-table correction. Packaging changes filenames and adds this README; the portfolio's schema and SQL explorers are presentation additions.
 
 No new licence is assigned to the original project or dataset. Consult the authors and source-data terms before reuse.
 
