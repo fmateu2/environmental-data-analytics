@@ -800,49 +800,54 @@ CREATE TABLE Policy_Budget_Alert (
     country_alert_count      NUMBER
 );
 
+-- Capture the baseline once per statement, before Government_Policy is mutating.
+-- Every inserted row is compared with that same pre-insert average.
 CREATE OR REPLACE TRIGGER trg_policy_budget_alert
-BEFORE INSERT ON Government_Policy
-FOR EACH ROW
-DECLARE
-    v_avg_budget  NUMBER;
-    v_alert_count NUMBER;
-BEGIN
-    SELECT AVG(budget_million_usd)
-    INTO v_avg_budget
-    FROM Government_Policy;
+FOR INSERT ON Government_Policy
+COMPOUND TRIGGER
+    v_avg_budget NUMBER;
 
-    IF :NEW.budget_million_usd > v_avg_budget
-    AND :NEW.target_reduction_percent > 20 THEN
+    BEFORE STATEMENT IS
+    BEGIN
+        SELECT AVG(budget_million_usd)
+        INTO v_avg_budget
+        FROM Government_Policy;
+    END BEFORE STATEMENT;
 
-        SELECT COUNT(*) + 1
-        INTO v_alert_count
-        FROM Policy_Budget_Alert
-        WHERE country_name = :NEW.country_name;
+    AFTER EACH ROW IS
+        v_alert_count NUMBER;
+    BEGIN
+        IF :NEW.budget_million_usd > v_avg_budget
+        AND :NEW.target_reduction_percent > 20 THEN
+            SELECT COUNT(*) + 1
+            INTO v_alert_count
+            FROM Policy_Budget_Alert
+            WHERE country_name = :NEW.country_name;
 
-        INSERT INTO Policy_Budget_Alert (
-            policy_id,
-            name_policy,
-            budget_million_usd,
-            avg_budget_at_insert,
-            target_reduction_percent,
-            alert_date,
-            country_name,
-            country_alert_count
-        )
-        VALUES (
-            :NEW.policy_id,
-            :NEW.name_policy,
-            :NEW.budget_million_usd,
-            v_avg_budget,
-            :NEW.target_reduction_percent,
-            SYSDATE,
-            :NEW.country_name,
-            v_alert_count
-        );
-    END IF;
-END;
+            INSERT INTO Policy_Budget_Alert (
+                policy_id,
+                name_policy,
+                budget_million_usd,
+                avg_budget_at_insert,
+                target_reduction_percent,
+                alert_date,
+                country_name,
+                country_alert_count
+            )
+            VALUES (
+                :NEW.policy_id,
+                :NEW.name_policy,
+                :NEW.budget_million_usd,
+                v_avg_budget,
+                :NEW.target_reduction_percent,
+                SYSDATE,
+                :NEW.country_name,
+                v_alert_count
+            );
+        END IF;
+    END AFTER EACH ROW;
+END trg_policy_budget_alert;
 /
-
 -- VALIDATION TRIGGER 2
 INSERT INTO Government_Policy (policy_id, name_policy, budget_million_usd, target_reduction_percent, policy_status, start_policy_year, policy_type, country_name)
 VALUES (9999, 'Test Policy Low', 10, 5, 'Active', 2020, 'Fiscal Incentive', 'Spain');
