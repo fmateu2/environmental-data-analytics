@@ -64,10 +64,14 @@ In the policy example, the original SQL filters the emissions year but does not 
 ## Trigger definitions
 
 - `trg_audit_plant_status`: records changes to power-plant status.
-- `trg_policy_budget_alert`: attempts to record an alert for a qualifying new policy against existing budget statistics.
+- `trg_policy_budget_alert`: records qualifying policy alerts against the average budget captured before the insert statement. A compound trigger avoids querying the changing policy table from a row trigger.
 - `trg_environmental_classification`: classifies inserted environmental observations using the scripted conditions.
 
-These definitions are preserved as academic source. Their correctness and transaction behavior should be checked in the target Oracle version with representative data; this packaging work did not execute them.
+The budget-alert trigger includes a correction to the original academic implementation: it captures the average once before the statement and applies that baseline to each inserted row. An empty baseline still produces no alerts. The other trigger definitions retain the original academic logic. Oracle compilation and execution have not been verified in this environment; run the regression script below in a dedicated development schema.
+
+## Budget-alert regression check
+
+After creating the schema and triggers in a dedicated Oracle development schema, run `sql/tests/policy-budget-alert.sql`. It checks a multi-row insert, a shared pre-statement average and per-country alert counts, then rolls back its fixture rows. Do not run the combined queries-and-triggers file against a production schema.
 
 ## Verification and interpretation
 
